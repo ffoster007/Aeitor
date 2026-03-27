@@ -3,7 +3,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  throw new Error("JWT_SECRET environment variable is not set. Please add JWT_SECRET to your .env file.");
+}
+const secret = new TextEncoder().encode(jwtSecret);
 
 // Routes ที่ต้อง login
 const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/profile"];

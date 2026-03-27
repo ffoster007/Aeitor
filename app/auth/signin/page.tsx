@@ -131,7 +131,7 @@ export default function SignInPage() {
                   Username
                 </label>
                 <input
-                  name="email" type="email" placeholder="Username"
+                  name="username" type="text" placeholder="Username"
                   autoComplete="username"
                   className="w-full px-3.5 py-2.5 rounded-xl border text-sm outline-none transition-colors"
                   style={{
