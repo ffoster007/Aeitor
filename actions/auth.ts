@@ -99,7 +99,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   const isValid = await bcrypt.compare(password, user?.password ?? dummyHash);
 
   if (!user || !isValid) {
-    return { success: false, errors: { _form: ["Username หรือ Password ไม่ถูกต้อง"] } };
+    return { success: false, errors: { _form: ["Username or Password is incorrect"] } };
   }
 
   // 3. ออก tokens และ set cookies
@@ -122,7 +122,7 @@ export async function signOutAction(): Promise<void> {
 
   await clearAuthCookies();
   revalidatePath("/", "layout");
-  redirect("/signin");
+  redirect("/auth/signin");
 }
 
 // ---------------------------------------------------------------

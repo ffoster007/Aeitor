@@ -95,7 +95,7 @@ export default function LandingPage() {
             className="text-xs px-3 py-1 rounded-full text-white hover:opacity-80 transition-opacity flex items-center gap-1"
             style={{ backgroundColor: "#1a1a1a", fontFamily: "'Helvetica Neue', sans-serif" }}
           >
-            See what's new →
+            See what&apos;s new →
           </button>
         </div>
 
