@@ -33,6 +33,55 @@ const THEME_OPTIONS: { label: Theme; icon: React.ReactNode }[] = [
 ];
 
 // ---------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------
+function AvatarImage({
+  src,
+  initials,
+  size,
+}: {
+  src?: string | null;
+  initials: string;
+  size: number;
+}) {
+  return (
+    <div
+      className="rounded-full overflow-hidden bg-[#2a2a2a] border border-[#333] flex-shrink-0 flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      {src ? (
+        <Image src={src} alt="Avatar" width={size} height={size} className="object-cover w-full h-full" />
+      ) : (
+        <span className="text-[#888] font-medium select-none" style={{ fontSize: size * 0.42 }}>
+          {initials}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DropdownItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      className="flex items-center gap-2.5 w-full px-4 py-1.5 text-sm text-[#aaa] hover:bg-[#1f1f1f] hover:text-white cursor-pointer"
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------
 // Avatar Component
 // ---------------------------------------------------------------
 export default function Avatar({ user }: { user: UserInfo }) {
@@ -158,7 +207,7 @@ export default function Avatar({ user }: { user: UserInfo }) {
               key={label}
               role="menuitem"
               onClick={() => handleThemeChange(label)}
-              className="flex items-center justify-between w-full px-4 py-1.5 text-sm hover:bg-[#1f1f1f] transition-colors cursor-pointer"
+              className="flex items-center justify-between w-full px-4 py-1.5 text-sm hover:bg-[#1f1f1f] cursor-pointer"
             >
               <span className="flex items-center gap-2.5 text-[#aaa]">
                 {icon}
@@ -177,7 +226,7 @@ export default function Avatar({ user }: { user: UserInfo }) {
             role="menuitem"
             onClick={handleSignOut}
             disabled={isPending}
-            className="flex items-center gap-2.5 w-full px-4 py-1.5 text-sm text-[#e05252] hover:bg-[#1f1f1f] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2.5 w-full px-4 py-1.5 text-sm text-[#e05252] hover:bg-[#1f1f1f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut size={14} strokeWidth={1.8} />
             {isPending ? "Signing out..." : "Sign out"}
@@ -188,51 +237,3 @@ export default function Avatar({ user }: { user: UserInfo }) {
   );
 }
 
-// ---------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------
-function AvatarImage({
-  src,
-  initials,
-  size,
-}: {
-  src?: string | null;
-  initials: string;
-  size: number;
-}) {
-  return (
-    <div
-      className="rounded-full overflow-hidden bg-[#2a2a2a] border border-[#333] flex-shrink-0 flex items-center justify-center"
-      style={{ width: size, height: size }}
-    >
-      {src ? (
-        <Image src={src} alt="Avatar" width={size} height={size} className="object-cover w-full h-full" />
-      ) : (
-        <span className="text-[#888] font-medium select-none" style={{ fontSize: size * 0.42 }}>
-          {initials}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function DropdownItem({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      role="menuitem"
-      onClick={onClick}
-      className="flex items-center gap-2.5 w-full px-4 py-1.5 text-sm text-[#aaa] hover:bg-[#1f1f1f] hover:text-white transition-colors cursor-pointer"
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

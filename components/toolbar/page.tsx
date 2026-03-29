@@ -26,8 +26,8 @@ export default async function Toolbar() {
           <Image
             src="/aeitor.png"
             alt="AEITOR Logo"
-            width={15}
-            height={15}
+            width={20}
+            height={20}
             priority
             className="mr-2"
           />
