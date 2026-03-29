@@ -12,7 +12,7 @@ const secret = new TextEncoder().encode(jwtSecret);
 // Routes ที่ต้อง login
 const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/profile"];
 // Routes สำหรับ guest (login แล้วจะ redirect ออก)
-const AUTH_PREFIXES = ["/signin", "/signup"];
+const AUTH_PREFIXES = ["/auth/signin", "/auth/signup"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
