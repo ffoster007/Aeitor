@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Box, Boxes, Layers } from "lucide-react";
 
 const tabs = [
@@ -10,17 +10,17 @@ const tabs = [
 
 type ActivityTabId = (typeof tabs)[number]['id'];
 
-type ActivityBarProps = {
-  activeTab: ActivityTabId;
-  onTabSelect: (tabId: ActivityTabId) => void;
-  isTerminalOpen: boolean;
-  onTerminalToggle: () => void;
-};
+export default function ActivityBar() {
+  const [activeTab, setActiveTab] = useState<ActivityTabId>('workspace');
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
-export default function ActivityBar({
-  activeTab,
-  onTabSelect,
-}: ActivityBarProps) {
+  const onTabSelect = (tabId: ActivityTabId) => {
+    setActiveTab(tabId);
+  };
+
+  const onTerminalToggle = () => {
+    setIsTerminalOpen((open) => !open);
+  };
   return (
     <div className="h-full w-12 bg-[#161616] border-r border-[#1f1f1f] flex flex-col items-center justify-between text-gray-300 py-2">
       <div className="flex flex-col items-center space-y-1">
