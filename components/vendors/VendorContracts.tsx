@@ -1,0 +1,560 @@
+"use client";
+
+import React, { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { format, differenceInDays } from "date-fns";
+import { Plus, AlertTriangle, Upload, Calendar, DollarSign, List } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { createVendor, updateVendor, deleteVendor, importVendorsCSV, type VendorFormData } from "@/actions/vendor";
+
+interface Vendor {
+  id: string;
+  name: string;
+  endDate: Date;
+  noticePeriod: number;
+  monthlyCost: number;
+}
+
+interface Props {
+  vendors: Vendor[];
+}
+
+type Status = "safe" | "warning" | "critical";
+type View = "list" | "calendar" | "spend";
+
+function getStatus(endDate: Date): Status {
+  const days = differenceInDays(endDate, new Date());
+  if (days < 30) return "critical";
+  if (days <= 90) return "warning";
+  return "safe";
+}
+
+function getMonthlyCost(v: Vendor): number {
+  return v.monthlyCost;
+}
+
+const STATUS_LABEL: Record<Status, string> = {
+  safe: "Safe",
+  warning: "Warning",
+  critical: "Critical",
+};
+
+const NOTICE_OPTIONS = [7, 14, 30, 45, 60, 90];
+
+function VendorForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial?: Vendor;
+  onSave: (data: VendorFormData) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [endDate, setEndDate] = useState(
+    initial ? format(initial.endDate, "yyyy-MM-dd") : "",
+  );
+  const [noticePeriod, setNoticePeriod] = useState(initial?.noticePeriod ?? 30);
+  const [monthlyCost, setMonthlyCost] = useState(
+    initial ? getMonthlyCost(initial).toString() : "",
+  );
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSave({
+      name,
+      endDate,
+      noticePeriod,
+      monthlyCost: parseFloat(monthlyCost) || 0,
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="vendor-name">Vendor name</Label>
+        <Input
+          id="vendor-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Salesforce"
+          required
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="end-date">Contract end date</Label>
+          <Input
+            id="end-date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="notice-period">Notice period</Label>
+          <Select
+            id="notice-period"
+            value={noticePeriod.toString()}
+            onChange={(e) => setNoticePeriod(Number(e.target.value))}
+          >
+            {NOTICE_OPTIONS.map((d) => (
+              <option key={d} value={d}>
+                {d} days
+              </option>
+            ))}
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="monthly-cost">Monthly cost (USD)</Label>
+        <Input
+          id="monthly-cost"
+          type="number"
+          min={0}
+          step="0.01"
+          value={monthlyCost}
+          onChange={(e) => setMonthlyCost(e.target.value)}
+          placeholder="0"
+          required
+        />
+      </div>
+      <div className="flex gap-2 pt-1">
+        <Button type="submit" className="flex-1">
+          {initial ? "Update vendor" : "Save vendor"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+// ─── Calendar view ─────────────────────────────────────────────────────────────
+function CalendarView({ vendors }: { vendors: Vendor[] }) {
+  const today = new Date();
+  const months: { year: number; month: number; label: string }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth(), label: format(d, "MMM yyyy") });
+  }
+
+  return (
+    <div className="space-y-2">
+      {months.map(({ year, month, label }) => {
+        const renewals = vendors.filter((v) => {
+          const d = new Date(v.endDate);
+          return d.getFullYear() === year && d.getMonth() === month;
+        });
+        return (
+          <div key={label} className="flex items-start gap-4 py-2 border-b border-[#2a2a2a]">
+            <div className="w-24 text-sm text-gray-400 shrink-0 pt-0.5">{label}</div>
+            <div className="flex flex-wrap gap-2">
+              {renewals.length === 0 ? (
+                <span className="text-xs text-gray-600">—</span>
+              ) : (
+                renewals.map((v) => {
+                  const status = getStatus(v.endDate);
+                  return (
+                    <span
+                      key={v.id}
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        status === "critical"
+                          ? "bg-red-900/40 text-red-400"
+                          : status === "warning"
+                          ? "bg-yellow-900/40 text-yellow-400"
+                          : "bg-green-900/40 text-green-400"
+                      }`}
+                    >
+                      {v.name} · {format(v.endDate, "MMM d")}
+                    </span>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Spend dashboard ────────────────────────────────────────────────────────────
+function SpendView({ vendors }: { vendors: Vendor[] }) {
+  const sorted = [...vendors].sort(
+    (a, b) => getMonthlyCost(b) - getMonthlyCost(a),
+  );
+  const total = vendors.reduce((sum, v) => sum + getMonthlyCost(v), 0);
+  const maxCost = sorted[0] ? getMonthlyCost(sorted[0]) : 1;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-[#222222] rounded-lg p-4 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Total monthly</p>
+          <p className="text-2xl font-semibold text-white mt-1">
+            ${(total / 1000).toFixed(total >= 1000 ? 1 : 0)}{total >= 1000 ? "K" : ""}
+          </p>
+        </div>
+        <div className="bg-[#222222] rounded-lg p-4 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Annual spend</p>
+          <p className="text-2xl font-semibold text-white mt-1">
+            ${((total * 12) / 1000).toFixed(1)}K
+          </p>
+        </div>
+        <div className="bg-[#222222] rounded-lg p-4 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Vendors tracked</p>
+          <p className="text-2xl font-semibold text-white mt-1">{vendors.length}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm text-gray-400 mb-3">Top vendors by cost</p>
+        <div className="space-y-3">
+          {sorted.map((v) => {
+            const cost = getMonthlyCost(v);
+            const pct = maxCost > 0 ? (cost / maxCost) * 100 : 0;
+            return (
+              <div key={v.id}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-200">{v.name}</span>
+                  <span className="text-gray-400">${cost.toLocaleString()}/mo</span>
+                </div>
+                <div className="h-2 bg-[#2a2a2a] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#3c89ff] rounded-full transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CSV Import ─────────────────────────────────────────────────────────────────
+function parseCsv(text: string): VendorFormData[] {
+  const lines = text.trim().split("\n");
+  const header = lines[0].toLowerCase().split(",").map((h) => h.trim().replace(/"/g, ""));
+  const colIndex = (names: string[]) =>
+    names.map((n) => header.indexOf(n)).find((i) => i >= 0) ?? -1;
+
+  const nameIdx = colIndex(["name", "vendor", "vendor name"]);
+  const dateIdx = colIndex(["end date", "enddate", "end_date", "renewal date", "renewaldate"]);
+  const noticeIdx = colIndex(["notice period", "notice", "noticeperiod"]);
+  const costIdx = colIndex(["monthly cost", "cost", "monthlycost", "price"]);
+
+  return lines.slice(1).flatMap((line) => {
+    const cols = line.split(",").map((c) => c.trim().replace(/"/g, ""));
+    const name = nameIdx >= 0 ? cols[nameIdx] : "";
+    const endDate = dateIdx >= 0 ? cols[dateIdx] : "";
+    if (!name || !endDate) return [];
+    return [
+      {
+        name,
+        endDate: new Date(endDate).toISOString().split("T")[0],
+        noticePeriod: noticeIdx >= 0 ? Number(cols[noticeIdx]) || 30 : 30,
+        monthlyCost: costIdx >= 0 ? parseFloat(cols[costIdx].replace(/[$,]/g, "")) || 0 : 0,
+      },
+    ];
+  });
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────────
+export default function VendorContracts({ vendors: initialVendors }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [view, setView] = useState<View>("list");
+  const [addOpen, setAddOpen] = useState(false);
+  const [editVendor, setEditVendor] = useState<Vendor | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const vendors = initialVendors;
+
+  const today = new Date();
+  const totalMonthly = vendors.reduce((s, v) => s + getMonthlyCost(v), 0);
+  const renewingIn30 = vendors.filter(
+    (v) => differenceInDays(v.endDate, today) <= 30 && differenceInDays(v.endDate, today) >= 0,
+  ).length;
+  const criticalVendors = vendors.filter((v) => getStatus(v.endDate) === "critical");
+
+  function refresh() {
+    router.refresh();
+  }
+
+  async function handleCreate(data: VendorFormData) {
+    startTransition(async () => {
+      await createVendor(data);
+      setAddOpen(false);
+      refresh();
+    });
+  }
+
+  async function handleUpdate(data: VendorFormData) {
+    if (!editVendor) return;
+    startTransition(async () => {
+      await updateVendor(editVendor.id, data);
+      setEditVendor(null);
+      refresh();
+    });
+  }
+
+  async function handleDelete(id: string) {
+    startTransition(async () => {
+      await deleteVendor(id);
+      setDeleteId(null);
+      refresh();
+    });
+  }
+
+  function handleCsvUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const rows = parseCsv(ev.target?.result as string);
+      if (rows.length === 0) return alert("No valid rows found in CSV");
+      startTransition(async () => {
+        await importVendorsCSV(rows);
+        refresh();
+      });
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="p-6 h-full overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-lg font-semibold text-white">Vendor contracts</h1>
+        <div className="flex items-center gap-2">
+          <label className="cursor-pointer">
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleCsvUpload}
+            />
+            <span className="inline-flex items-center gap-1.5 h-9 rounded-md px-3 text-sm border border-[#383838] bg-transparent hover:bg-[#383838] text-gray-300 hover:text-white transition-colors cursor-pointer">
+              <Upload size={14} />
+              Import CSV
+            </span>
+          </label>
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus size={14} />
+                Add vendor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add vendor</DialogTitle>
+                <DialogDescription>
+                  Enter the contract details for a new vendor.
+                </DialogDescription>
+              </DialogHeader>
+              <VendorForm
+                onSave={handleCreate}
+                onCancel={() => setAddOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-[#222222] rounded-lg px-4 py-3 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Total vendors</p>
+          <p className="text-2xl font-semibold text-white mt-1">{vendors.length}</p>
+        </div>
+        <div className="bg-[#222222] rounded-lg px-4 py-3 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Renewing in 30d</p>
+          <p className={`text-2xl font-semibold mt-1 ${renewingIn30 > 0 ? "text-red-400" : "text-white"}`}>
+            {renewingIn30}
+          </p>
+        </div>
+        <div className="bg-[#222222] rounded-lg px-4 py-3 border border-[#2a2a2a]">
+          <p className="text-xs text-gray-500">Monthly spend</p>
+          <p className="text-2xl font-semibold text-white mt-1">
+            ${totalMonthly >= 1000
+              ? `${(totalMonthly / 1000).toFixed(1)}K`
+              : totalMonthly.toLocaleString()}
+          </p>
+        </div>
+      </div>
+
+      {/* View tabs */}
+      <div className="flex gap-1 mb-5 bg-[#1f1f1f] rounded-lg p-1 w-fit">
+        {(["list", "calendar", "spend"] as View[]).map((v) => {
+          const Icon = v === "list" ? List : v === "calendar" ? Calendar : DollarSign;
+          const label = v === "list" ? "Contracts" : v === "calendar" ? "Calendar" : "Spending";
+          return (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors cursor-pointer ${
+                view === v
+                  ? "bg-[#383838] text-white"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <Icon size={13} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {view === "list" && (
+        <div>
+          {/* Critical alerts */}
+          {criticalVendors.map((v) => {
+            const days = differenceInDays(v.endDate, today);
+            const noticeDeadline = new Date(v.endDate);
+            noticeDeadline.setDate(noticeDeadline.getDate() - v.noticePeriod);
+            const pastNotice = today >= noticeDeadline;
+            return (
+              <div
+                key={v.id}
+                className="flex items-start gap-3 bg-amber-950/30 border border-amber-800/50 rounded-lg px-4 py-3 mb-3"
+              >
+                <AlertTriangle size={16} className="text-amber-400 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="text-amber-200 font-medium">
+                    {v.name} renews in {days} day{days !== 1 ? "s" : ""}
+                  </p>
+                  <p className="text-amber-400/80 text-xs mt-0.5">
+                    Notice period ends {format(noticeDeadline, "MMM d")}
+                    {pastNotice ? " — action needed now" : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Table */}
+          {vendors.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <p className="text-sm">No vendors yet. Add your first vendor or import a CSV.</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-500 border-b border-[#2a2a2a]">
+                  <th className="text-left pb-2 font-normal">Vendor</th>
+                  <th className="text-left pb-2 font-normal">Renewal</th>
+                  <th className="text-left pb-2 font-normal">Cost/mo</th>
+                  <th className="text-left pb-2 font-normal">Status</th>
+                  <th className="text-right pb-2 font-normal">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map((v) => {
+                  const status = getStatus(v.endDate);
+                  return (
+                    <tr
+                      key={v.id}
+                      className="border-b border-[#1f1f1f] hover:bg-[#1f1f1f]/50 transition-colors"
+                    >
+                      <td className="py-3 font-medium text-gray-100">{v.name}</td>
+                      <td className="py-3 text-gray-300">{format(v.endDate, "MMM d")}</td>
+                      <td className="py-3 text-gray-300">
+                        ${getMonthlyCost(v).toLocaleString()}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={status}>{STATUS_LABEL[status]}</Badge>
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setEditVendor(v)}
+                            className="text-xs text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(v.id)}
+                            className="text-xs text-red-600 hover:text-red-400 transition-colors cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {view === "calendar" && <CalendarView vendors={vendors} />}
+      {view === "spend" && <SpendView vendors={vendors} />}
+
+      {/* Edit dialog */}
+      <Dialog open={!!editVendor} onOpenChange={(o) => !o && setEditVendor(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit vendor</DialogTitle>
+            <DialogDescription>
+              Update the selected vendor&apos;s contract details.
+            </DialogDescription>
+          </DialogHeader>
+          {editVendor && (
+            <VendorForm
+              initial={editVendor}
+              onSave={handleUpdate}
+              onCancel={() => setEditVendor(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete vendor?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the vendor and its alert history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="destructive"
+              className="flex-1"
+              disabled={isPending}
+              onClick={() => deleteId && handleDelete(deleteId)}
+            >
+              Delete
+            </Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

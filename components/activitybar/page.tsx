@@ -1,10 +1,10 @@
 "use client";
 import React from "react";
-import { House, Boxes, Layers } from "lucide-react";
+import { House, Boxes } from "lucide-react";
 
 const tabs = [
   { id: 'Home', icon: House, label: 'Home' },
-  { id: 'WorkBox', icon: Boxes, label: 'WorkBox' },
+  { id: 'Workspace', icon: Boxes, label: 'Workspace' },
 ] as const;
 
 export type ActivityTabId = (typeof tabs)[number]['id'];
