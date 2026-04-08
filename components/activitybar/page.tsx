@@ -12,14 +12,9 @@ type ActivityTabId = (typeof tabs)[number]['id'];
 
 export default function ActivityBar() {
   const [activeTab, setActiveTab] = useState<ActivityTabId>('workspace');
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   const onTabSelect = (tabId: ActivityTabId) => {
     setActiveTab(tabId);
-  };
-
-  const onTerminalToggle = () => {
-    setIsTerminalOpen((open) => !open);
   };
   return (
     <div className="h-full w-12 bg-[#161616] border-r border-[#1f1f1f] flex flex-col items-center justify-between text-gray-300 py-2">
