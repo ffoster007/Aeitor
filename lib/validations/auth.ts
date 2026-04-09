@@ -28,5 +28,13 @@ export const signInSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters long").max(72, "Password must be at most 72 characters long"),
 });
 
+export const verifyEmailSchema = z.object({
+  code: z
+    .string()
+    .length(6, "Code must be exactly 6 digits")
+    .regex(/^\d{6}$/, "Code must contain only digits"),
+});
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;

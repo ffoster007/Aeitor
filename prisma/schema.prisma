@@ -17,13 +17,28 @@ model User {
   username      String         @unique
   email         String         @unique
   password      String          // bcrypt hash — ห้ามเก็บ plain text
+  emailVerified Boolean        @default(false) @map("email_verified")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   refreshTokens RefreshToken[]
   vendors       Vendor[]
   alertSettings VendorAlertSetting[]
+  verificationCodes VerificationCode[]
   
   @@map("users")
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  code      String   // 6-digit OTP
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0) // Track failed attempts
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("verification_codes")
 }
 
 model Vendor {

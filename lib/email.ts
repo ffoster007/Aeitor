@@ -2,7 +2,9 @@ import { Resend } from "resend";
 import { differenceInDays, format } from "date-fns";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "Aeitor Alerts <alerts@aeitor.io>";
+const FROM = process.env.RESEND_FROM_EMAIL || "Aeitor <onboarding@resend.dev>";
+
+// Aeitor <onboarding@resend.dev> สำหรับทดสอบ
 
 interface Vendor {
   id: string;
@@ -16,6 +18,16 @@ function toNumber(v: number | { toNumber: () => number }) {
   return typeof v === "number" ? v : v.toNumber();
 }
 
+async function sendEmail(payload: Parameters<typeof resend.emails.send>[0]) {
+  const result = await resend.emails.send(payload);
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return result.data;
+}
+
 export async function sendRenewalAlert(
   to: string,
   vendor: Vendor,
@@ -24,7 +36,7 @@ export async function sendRenewalAlert(
   const endFormatted = format(vendor.endDate, "MMM d, yyyy");
   const cost = toNumber(vendor.monthlyCost);
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM,
     to,
     subject: `⚠️ ${vendor.name} renews in ${daysLeft} days`,
@@ -68,7 +80,7 @@ export async function sendWeeklySummary(
     )
     .join("");
 
-  await resend.emails.send({
+  await sendEmail({
     from: FROM,
     to,
     subject: `📋 Weekly: ${expiringSoon.length} contract${expiringSoon.length > 1 ? "s" : ""} renewing within 30 days`,
@@ -88,6 +100,30 @@ export async function sendWeeklySummary(
           <tbody>${rows}</tbody>
         </table>
         <p style="color:#718096;font-size:14px">Log in to Aeitor to take action.</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendVerificationEmail(
+  to: string,
+  code: string,
+  username: string,
+) {
+  await sendEmail({
+    from: FROM,
+    to,
+    subject: "Verify your Aeitor account",
+    html: `
+      <div style="font-family:sans-serif;color:#111;max-width:560px">
+        <h2>Verify Your Email</h2>
+        <p>Hi <strong>${username}</strong>,</p>
+        <p>Welcome to Aeitor! Use the following code to verify your email address:</p>
+        <div style="background:#f5f5f5;border:2px solid #e2e8f0;border-radius:8px;padding:24px;text-align:center;margin:24px 0">
+          <div style="font-size:48px;font-weight:bold;letter-spacing:8px;color:#1a202c;font-family:monospace">${code}</div>
+        </div>
+        <p style="color:#718096;font-size:14px">This code expires in 10 minutes.</p>
+        <p style="color:#718096;font-size:12px">If you didn't request this email, please ignore it.</p>
       </div>
     `,
   });

@@ -9,7 +9,8 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, hashToken } from "@/lib/jwt";
 import { setAuthCookies, clearAuthCookies, getRefreshToken } from "@/lib/cookies";
-import { signUpSchema, signInSchema } from "@/lib/validations/auth";
+import { signUpSchema, signInSchema, verifyEmailSchema } from "@/lib/validations/auth";
+import { createAndSendVerificationCode, verifyCode } from "@/lib/verification";
 import type { ActionResult } from "@/types/actions";
 
 const BCRYPT_ROUNDS = 12; // ค่า cost factor — 12 เหมาะกับ production
@@ -52,23 +53,32 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   // 3. Hash password
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-  // 4. สร้าง User ใน DB
+  // 4. สร้าง User ใน DB (emailVerified: false)
   let user: { id: string; email: string; username: string };
   try {
     user = await prisma.user.create({
-      data: { username, email, password: hashedPassword },
+      data: { 
+        username, 
+        email, 
+        password: hashedPassword,
+        emailVerified: false,
+      },
       select: { id: true, email: true, username: true },
     });
   } catch {
     return { success: false, errors: { _form: ["เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"] } };
   }
 
-  // 5. ออก tokens และ set cookies
-  await issueTokens(user);
+  // 5. สร้างและส่ง verification code
+  try {
+    await createAndSendVerificationCode(user.id, user.email, user.username);
+  } catch {
+    return { success: false, errors: { _form: ["ไม่สามารถส่ง email ได้ กรุณาลองใหม่อีกครั้ง"] } };
+  }
 
-  // 6. Redirect ไป dashboard
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  // 6. Store userId in query param for verification page
+  const searchParams = new URLSearchParams({ userId: user.id });
+  redirect(`/auth/verify?${searchParams.toString()}`);
 }
 
 // ---------------------------------------------------------------
@@ -91,7 +101,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   // 2. หา user — ใช้ message กว้าง ๆ เพื่อป้องกัน user enumeration
   const user = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, email: true, username: true, password: true },
+    select: { id: true, email: true, username: true, password: true, emailVerified: true },
   });
 
   // timing-safe: compare เสมอแม้ไม่มี user เพื่อป้องกัน timing attack
@@ -102,7 +112,27 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
     return { success: false, errors: { _form: ["Username or Password is incorrect"] } };
   }
 
-  // 3. ออก tokens และ set cookies
+  // 3. ตรวจสอบว่า email ได้รับการยืนยันแล้ว
+  if (!user.emailVerified) {
+    try {
+      await createAndSendVerificationCode(user.id, user.email, user.username);
+    } catch {
+      return {
+        success: false,
+        errors: { _form: ["We could not send a verification email right now. Please try again."] },
+      };
+    }
+
+    const searchParams = new URLSearchParams({
+      userId: user.id,
+      sent: "1",
+      source: "signin",
+    });
+
+    redirect(`/auth/verify?${searchParams.toString()}`);
+  }
+
+  // 4. ออก tokens และ set cookies
   await issueTokens({ id: user.id, email: user.email, username: user.username });
 
   revalidatePath("/", "layout");
@@ -159,6 +189,76 @@ export async function refreshSessionAction(): Promise<boolean> {
     await clearAuthCookies();
     return false;
   }
+}
+
+// ---------------------------------------------------------------
+// VERIFY EMAIL
+// ---------------------------------------------------------------
+export async function verifyEmailAction(userId: string, code: string): Promise<ActionResult> {
+  // 1. Validate input
+  const parsed = verifyEmailSchema.safeParse({ code });
+  if (!parsed.success) {
+    return { success: false, errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const { code: validatedCode } = parsed.data;
+
+  // 2. ตรวจสอบ userId
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, username: true, emailVerified: true },
+  });
+
+  if (!user) {
+    return { success: false, errors: { _form: ["ไม่พบผู้ใช้"] } };
+  }
+
+  // 3. ถ้า email ยืนยันแล้ว ให้ redirect ไป signin
+  if (user.emailVerified) {
+    redirect("/auth/signin");
+  }
+
+  // 4. ตรวจสอบ verification code
+  const isValid = await verifyCode(userId, validatedCode);
+  if (!isValid) {
+    return { success: false, errors: { code: ["รหัสไม่ถูกต้องหรือหมดอายุ"] } };
+  }
+
+  // 5. ออก tokens และ set cookies
+  await issueTokens(user);
+
+  // 6. Redirect ไป dashboard
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+// ---------------------------------------------------------------
+// RESEND VERIFICATION CODE
+// ---------------------------------------------------------------
+export async function resendVerificationCodeAction(userId: string): Promise<ActionResult> {
+  // 1. ตรวจสอบ userId
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, username: true, emailVerified: true },
+  });
+
+  if (!user) {
+    return { success: false, errors: { _form: ["ไม่พบผู้ใช้"] } };
+  }
+
+  // 2. ถ้า email ยืนยันแล้ว ให้ return error
+  if (user.emailVerified) {
+    return { success: false, errors: { _form: ["Email ของคุณได้รับการยืนยันแล้ว"] } };
+  }
+
+  // 3. สร้างและส่ง verification code ใหม่
+  try {
+    await createAndSendVerificationCode(user.id, user.email, user.username);
+  } catch {
+    return { success: false, errors: { _form: ["ไม่สามารถส่ง email ได้ กรุณาลองใหม่อีกครั้ง"] } };
+  }
+
+  return { success: true };
 }
 
 // ---------------------------------------------------------------
