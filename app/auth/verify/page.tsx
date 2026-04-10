@@ -315,7 +315,7 @@ export default function VerifyPage() {
                   type="button"
                   onClick={handleResend}
                   disabled={isResending}
-                  className="w-full py-2.5 rounded-xl border text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl border text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-100"
                   style={{
                     borderColor: "#d1d5db",
                     backgroundColor: "rgba(255,255,255,0.6)",

@@ -9,6 +9,7 @@ const plans = [
     cadence: '/month',
     badge: 'Current plan',
     tone: 'neutral',
+    description: 'For small teams getting out of spreadsheets and starting with a shared renewal view.',
     features: [
       'Track up to 10 contracts',
       '30-day renewal reminders',
@@ -22,6 +23,7 @@ const plans = [
     cadence: '/user /month',
     badge: 'Recommended',
     tone: 'blue',
+    description: 'For teams that need earlier alerts, shared ownership, and cleaner billing decisions.',
     features: [
       'Unlimited contracts and vendors',
       '90, 60, and 30-day alerts',
@@ -35,6 +37,7 @@ const plans = [
     cadence: '/user /month',
     badge: 'Advanced controls',
     tone: 'amber',
+    description: 'For larger organizations that need approvals, reporting, and stronger operating controls.',
     features: [
       'Everything in Growth',
       'Approval workflows',
@@ -51,118 +54,120 @@ export default async function BillingPage() {
     <div className="h-screen flex flex-col">
       <Toolbar user={user} />
       <main className="flex-1 overflow-y-auto bg-[#1a1a1a] text-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:px-6">
-          <section className="border border-[#2a2a2a] bg-[#202020]">
-            <div className="border-b border-[#2a2a2a] px-5 py-4">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a8a8a]">Billing</p>
-              <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <h1 className="text-2xl font-semibold text-white">Plan selection</h1>
-                  <p className="mt-1 text-sm text-[#9f9fa6]">
-                    Manage access limits, renewal alerts, and billing features for this workspace.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs text-[#b4b4bb]">
-                  <span className="border border-[#323232] bg-[#181818] px-3 py-1.5">Workspace: {user?.username ?? 'Guest workspace'}</span>
-                  <span className="border border-[#323232] bg-[#181818] px-3 py-1.5">Current: Free Tier</span>
-                  <span className="border border-[#323232] bg-[#181818] px-3 py-1.5">Cycle: Monthly</span>
-                </div>
-              </div>
-            </div>
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 lg:px-6">
 
-            <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="divide-y divide-[#2a2a2a]">
-                {plans.map((plan) => {
-                  const isCurrent = plan.name === 'Free Tier';
-                  const isRecommended = plan.tone === 'blue';
-                  const toneClasses =
-                    plan.tone === 'blue'
-                      ? 'border-[#214a63] bg-[#1a2530]'
-                      : plan.tone === 'amber'
-                        ? 'border-[#4b3522] bg-[#221b16]'
-                        : 'border-[#323232] bg-[#181818]';
-                  const badgeClasses =
-                    plan.tone === 'blue'
-                      ? 'text-[#8ed8ff] border-[#214a63] bg-[#13202a]'
-                      : plan.tone === 'amber'
-                        ? 'text-[#efc089] border-[#4b3522] bg-[#231a14]'
-                        : 'text-[#c7c7cc] border-[#3a3a3a] bg-[#202020]';
-                  const buttonClasses = isCurrent
-                    ? 'border-[#3a3a3a] bg-[#242424] text-[#d4d4d8]'
-                    : isRecommended
-                      ? 'border-[#2f77a3] bg-[#3c89ff] text-white'
-                      : 'border-[#3a3a3a] bg-[#2a2a2a] text-white';
+          <section className="grid gap-5 lg:grid-cols-3">
+            {plans.map((plan) => {
+              const isCurrent = plan.name === 'Free Tier';
+              const isRecommended = plan.tone === 'blue';
+              const cardStyle = isRecommended
+                ? {
+                    backgroundColor: '#ece4d6',
+                    borderColor: '#d8cab6',
+                    color: '#171717',
+                    boxShadow: '0 20px 48px rgba(0, 0, 0, 0.18)',
+                  }
+                : {
+                    backgroundColor: '#212121',
+                    borderColor: '#2f2f2f',
+                    color: '#f3efe8',
+                  };
+              const mutedText = isRecommended ? '#655d52' : '#9d978d';
+              const bodyText = isRecommended ? '#38332d' : '#d9d3ca';
+              const buttonStyle = isCurrent
+                ? {
+                    backgroundColor: 'transparent',
+                    borderColor: isRecommended ? '#bba98e' : '#3a3a3a',
+                    color: isRecommended ? '#38332d' : '#e8e3da',
+                  }
+                : isRecommended
+                  ? {
+                      backgroundColor: '#171717',
+                      borderColor: '#171717',
+                      color: '#f3efe8',
+                    }
+                  : {
+                      backgroundColor: '#ece4d6',
+                      borderColor: '#ece4d6',
+                      color: '#171717',
+                    };
 
-                  return (
-                    <article key={plan.name} className="grid gap-4 px-5 py-5 lg:grid-cols-[220px_minmax(0,1fr)_180px] lg:items-start">
+              return (
+                  <article
+                    key={plan.name}
+                    className="flex flex-col rounded-[28px] border p-6"
+                    style={cardStyle}
+                  >
+                    <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className={`inline-flex border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${badgeClasses}`}>
-                          {plan.badge}
-                        </div>
-                        <h2 className="mt-3 text-xl font-semibold text-white">{plan.name}</h2>
-                        <div className="mt-3 flex items-end gap-2">
-                          <span className="text-4xl font-semibold leading-none text-white">{plan.price}</span>
-                          <span className="pb-1 text-xs text-[#8d8d93]">{plan.cadence}</span>
-                        </div>
-                      </div>
-
-                      <div className={`border px-4 py-4 ${toneClasses}`}>
-                        <p className="mb-3 text-xs uppercase tracking-[0.16em] text-[#8d8d93]">Included</p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {plan.features.map((feature) => (
-                            <div key={feature} className="flex items-start gap-2 text-sm text-[#dfdfe4]">
-                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
-                              <span>{feature}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-3 lg:items-end">
-                        <span className="text-xs uppercase tracking-[0.16em] text-[#7f7f86]">
-                          {isCurrent ? 'Active plan' : 'Available'}
-                        </span>
-                        <button
-                          type="button"
-                          className={`min-w-[160px] border px-4 py-2.5 text-sm font-medium transition-colors hover:border-[#4b4b4b] cursor-pointer ${buttonClasses}`}
+                        <p
+                          className="text-xs uppercase tracking-[0.22em] mb-3"
+                          style={{ color: mutedText, fontFamily: "'Helvetica Neue', sans-serif" }}
                         >
-                          {isCurrent ? 'Current plan' : `Switch to ${plan.name}`}
-                        </button>
+                          {plan.badge}
+                        </p>
+                        <h3
+                          className="text-3xl leading-tight"
+                          style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 400 }}
+                        >
+                          {plan.name}
+                        </h3>
                       </div>
-                    </article>
-                  );
-                })}
-              </div>
 
-              <aside className="border-l border-t border-[#2a2a2a] bg-[#171717] xl:border-t-0">
-                <div className="border-b border-[#2a2a2a] px-5 py-4">
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a8a8a]">Upgrade notes</p>
-                </div>
+                      <span
+                        className="rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.18em]"
+                        style={{
+                          borderColor: isRecommended ? '#bba98e' : '#3a3a3a',
+                          color: mutedText,
+                          fontFamily: "'Helvetica Neue', sans-serif",
+                        }}
+                      >
+                        {plan.price === '$0' ? 'Starter' : 'Team plan'}
+                      </span>
+                    </div>
 
-                <div className="space-y-4 px-5 py-5 text-sm text-[#a5a5ad]">
-                  <div className="border border-[#2a2a2a] bg-[#1d1d1d] p-4">
-                    <p className="text-white">Why teams move to Growth</p>
-                    <p className="mt-2 leading-6">
-                      It adds multi-window alerts and shared ownership so renewals stop depending on one person remembering dates.
-                    </p>
-                  </div>
+                    <div className="mt-6">
+                      <div className="flex items-end gap-2">
+                        <p
+                          className="text-5xl leading-none"
+                          style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 400 }}
+                        >
+                          {plan.price}
+                        </p>
+                        <p className="pb-1 text-sm" style={{ color: mutedText, fontFamily: "'Helvetica Neue', sans-serif" }}>
+                          {plan.cadence}
+                        </p>
+                      </div>
 
-                  <div className="border border-[#2a2a2a] bg-[#1d1d1d] p-4">
-                    <p className="text-white">When Scale makes sense</p>
-                    <p className="mt-2 leading-6">
-                      Choose it when approvals, executive reporting, or cross-team visibility become part of the renewal process.
-                    </p>
-                  </div>
+                      <p className="mt-4 text-sm leading-6" style={{ color: bodyText, fontFamily: "'Helvetica Neue', sans-serif" }}>
+                        {plan.description}
+                      </p>
+                    </div>
 
-                  <div className="border border-[#214a63] bg-[#15202a] p-4 text-[#d8efff]">
-                    <p className="text-white">Recommendation</p>
-                    <p className="mt-2 leading-6">
-                      Growth is the best fit once procurement and finance both need access to the same contract timeline.
-                    </p>
-                  </div>
-                </div>
-              </aside>
-            </div>
+                    <div className="mt-6 space-y-3 flex-1">
+                      {plan.features.map((feature) => (
+                        <div key={feature} className="flex items-start gap-3">
+                          <span
+                            className="mt-1.5 h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: isRecommended ? '#171717' : '#ece4d6' }}
+                          />
+                          <p className="text-sm leading-relaxed" style={{ color: bodyText, fontFamily: "'Helvetica Neue', sans-serif" }}>
+                            {feature}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-7 rounded-full border px-5 py-3 text-sm transition-colors cursor-pointer hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
+                      style={buttonStyle}
+                    >
+                      {isCurrent ? 'Current plan' : 'Choose plan'}
+                    </button>
+                  </article>
+              );
+            })}
           </section>
         </div>
       </main>

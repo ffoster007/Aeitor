@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import type { ToolbarProps } from './toolbar/page';
 import ActivityBar, { type ActivityTabId } from '../components/activitybar/page';
+import HowToPage from './howto/page';
 import Toolbar from './toolbar/page';
 import VendorContracts from './vendors/VendorContracts';
 
@@ -24,6 +25,7 @@ export default function Page({ user, vendors }: PageProps) {
       <div className='flex flex-1 overflow-hidden'>
         <ActivityBar activeTab={activeTab} onTabSelect={setActiveTab} />
         <div className="flex-1 bg-[#1a1a1a] overflow-hidden">
+          {activeTab === 'Home' && <HowToPage />}
           {activeTab === 'Workspace' && <VendorContracts vendors={vendors} />}
         </div>
       </div>
