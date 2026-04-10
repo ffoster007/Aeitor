@@ -39,6 +39,10 @@ export default function SignInPage() {
 
   const errors = result && !result.success ? result.errors : {};
 
+  function startOAuth(provider: "google" | "github") {
+    window.location.assign(`/api/auth/oauth/${provider}${oauthQuery}`);
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -76,7 +80,7 @@ export default function SignInPage() {
         </Link>
 
         <p className="text-sm" style={{ color: "#666", fontFamily: "'Helvetica Neue', sans-serif" }}>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="./signup" className="underline underline-offset-2 hover:text-black transition-colors" style={{ color: "#333" }}>
             Sign up
           </Link>
@@ -104,23 +108,25 @@ export default function SignInPage() {
 
             {/* OAuth buttons */}
             <div className="p-5 flex flex-col gap-2.5">
-              <Link
-                href={`/api/auth/oauth/google${oauthQuery}`}
+              <button
+                type="button"
+                onClick={() => startOAuth("google")}
                 className="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl border border-neutral-300 text-sm hover:border-neutral-500 hover:bg-white cursor-pointer"
                 style={{ color: "#333", fontFamily: "'Helvetica Neue', sans-serif", backgroundColor: "rgba(255,255,255,0.6)" }}
               >
                 <GoogleIcon />
                 Continue with Google
-              </Link>
+              </button>
 
-              <Link
-                href={`/api/auth/oauth/github${oauthQuery}`}
+              <button
+                type="button"
+                onClick={() => startOAuth("github")}
                 className="flex items-center justify-center gap-3 w-full py-2.5 rounded-xl border border-neutral-300 text-sm hover:border-neutral-500 hover:bg-white cursor-pointer"
                 style={{ color: "#333", fontFamily: "'Helvetica Neue', sans-serif", backgroundColor: "rgba(255,255,255,0.6)" }}
               >
                 <GitHubIcon />
                 Continue with GitHub
-              </Link>
+              </button>
             </div>
 
             {/* Form-level error */}
