@@ -12,8 +12,7 @@ const plans = [
     description: 'For small teams getting out of spreadsheets and starting with a shared renewal view.',
     features: [
       'Track up to 2 contracts',
-      '30-day renewal reminders',
-      'Basic billing overview',
+      'Basic overview',
     ],
   },
   {
@@ -25,20 +24,20 @@ const plans = [
     description: 'For teams that need earlier alerts, shared ownership, and cleaner billing decisions.',
     features: [
       'Track up to 50 contracts',
-      '90, 60, and 30-day alerts',
-      'CSV exports for finance reviews',
+      'CSV exports for reviews',
     ],
   },
   {
     name: 'Scale',
     price: '$20',
     cadence: '/user /month',
-    badge: 'Advanced controls',
+    badge: 'business',
     tone: 'amber',
     description: 'For larger organizations that need approvals, reporting, and stronger operating controls.',
     features: [
+      'Everything in Growth',
       'Unlimited contracts and vendors',
-      'Quarterly executive spend reports',
+      'Exclusive early updates',
     ],
   },
 ];
