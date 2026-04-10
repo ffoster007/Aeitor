@@ -13,7 +13,7 @@ const setupSteps = [
 		title: "Add your vendors",
 		description:
 			"Start in Workspace and create each vendor with contract end date, notice period, and monthly cost.",
-		detail: "If your team already has a spreadsheet, import the list by CSV to avoid manual entry.",
+		detail: "If your team already has a spreadsheet, import the list by CSV",
 		icon: FileSpreadsheet,
 	},
 	{
@@ -137,11 +137,7 @@ export default function HowToPage() {
 						<div className="flex items-center justify-between gap-3">
 							<div>
 								<p className="text-[11px] uppercase tracking-[0.22em] text-[#8a8a8a]">Getting started</p>
-								<h2 className="mt-2 text-2xl font-semibold text-white">Three-step setup</h2>
 							</div>
-							<span className="rounded-full border border-[#343434] bg-[#191919] px-3 py-1 text-xs text-[#b3b3ba]">
-								5 to 10 minutes
-							</span>
 						</div>
 
 						<div className="mt-6 space-y-4">
@@ -179,26 +175,6 @@ export default function HowToPage() {
 							))}
 						</div>
 					</div>
-				</section>
-
-				<section className="grid gap-5 lg:grid-cols-2">
-					{workspaceSections.map((section) => {
-						const Icon = section.icon;
-						return (
-							<article key={section.name} className="rounded-[28px] border border-[#2b2b2b] bg-[#202020] p-6">
-								<div className="flex items-start gap-4">
-									<div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#343434] bg-[#181818] text-[#ece7dc]">
-										<Icon className="h-5 w-5" />
-									</div>
-									<div>
-										<p className="text-[11px] uppercase tracking-[0.22em] text-[#8a8a8a]">Navigation</p>
-										<h2 className="mt-2 text-xl font-semibold text-white">{section.name}</h2>
-										<p className="mt-3 max-w-xl text-sm leading-7 text-[#b2b2bb]">{section.description}</p>
-									</div>
-								</div>
-							</article>
-						);
-					})}
 				</section>
 			</div>
 		</div>
