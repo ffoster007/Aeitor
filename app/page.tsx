@@ -128,7 +128,7 @@ export default async function LandingPage() {
           style={{ color: "#444", fontFamily: "'Helvetica Neue', sans-serif", letterSpacing: "0.01em" }}
         >
           {[
-            { label: "Docs", href: "#overview" },
+            { label: "Overview", href: "#overview" },
             { label: "Pricing", href: "#pricing" },
             { label: "Workspace", href: "#contracts" },
           ].map((item) => (
