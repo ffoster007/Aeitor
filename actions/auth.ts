@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { verifyRefreshToken, hashToken } from "@/lib/jwt";
 import { clearAuthCookies, getRefreshToken } from "@/lib/cookies";
+import { requireUser } from "@/lib/session";
 import { signUpSchema, signInSchema, verifyEmailSchema } from "@/lib/validations/auth";
 import { createAndSendVerificationCode, verifyCode } from "@/lib/verification";
 import { issueTokens } from "@/lib/auth-tokens";
@@ -101,7 +102,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   // 2. หา user — ใช้ message กว้าง ๆ เพื่อป้องกัน user enumeration
   const user = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, email: true, username: true, password: true, emailVerified: true },
+    select: { id: true, email: true, username: true, password: true, emailVerified: true, deletedAt: true },
   });
 
   // timing-safe: compare เสมอแม้ไม่มี user เพื่อป้องกัน timing attack
@@ -109,6 +110,10 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   const isValid = await bcrypt.compare(password, user?.password ?? dummyHash);
 
   if (!user || !isValid) {
+    return { success: false, errors: { _form: ["Username or Password is incorrect"] } };
+  }
+
+  if (user.deletedAt) {
     return { success: false, errors: { _form: ["Username or Password is incorrect"] } };
   }
 
@@ -171,10 +176,10 @@ export async function refreshSessionAction(): Promise<boolean> {
     const hashed = hashToken(rawRefreshToken);
     const stored = await prisma.refreshToken.findUnique({
       where: { token: hashed },
-      include: { user: { select: { id: true, email: true, username: true } } },
+      include: { user: { select: { id: true, email: true, username: true, deletedAt: true } } },
     });
 
-    if (!stored || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date() || stored.user.deletedAt) {
       await clearAuthCookies();
       return false;
     }
@@ -264,10 +269,14 @@ export async function resendVerificationCodeAction(userId: string): Promise<Acti
 // ---------------------------------------------------------------
 // CHANGE PASSWORD
 // ---------------------------------------------------------------
-export async function changePasswordAction(
-  userId: string,
-  formData: FormData,
-): Promise<ActionResult> {
+export async function changePasswordAction(formData: FormData): Promise<ActionResult> {
+  let sessionUser;
+  try {
+    sessionUser = await requireUser();
+  } catch {
+    return { success: false, errors: { _form: ["Unauthorized"] } };
+  }
+
   const currentPassword = formData.get("currentPassword");
   const newPassword = formData.get("newPassword");
   const confirmPassword = formData.get("confirmPassword");
@@ -296,7 +305,7 @@ export async function changePasswordAction(
 
   // Fetch user — only users with a password hash can change it
   const user = await prisma.user.findUnique({
-    where: { id: userId },
+    where: { id: sessionUser.sub },
     select: { password: true },
   });
 
@@ -319,7 +328,7 @@ export async function changePasswordAction(
   const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
   await prisma.user.update({
-    where: { id: userId },
+    where: { id: sessionUser.sub },
     data: { password: hashedPassword },
   });
 

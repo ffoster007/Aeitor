@@ -22,7 +22,6 @@ export default async function SettingsPage() {
             <AccountSettings
               username={user.username}
               email={user.email}
-              userId={user.sub}
               isOAuth={isOAuth}
             />
           ) : (
