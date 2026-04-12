@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { buildThemeInitScript } from "@/lib/theme";
+import { buildThemeInitScript } from "../../lib/theme";
 
 function escapeInlineScript(script: string) {
   return script
