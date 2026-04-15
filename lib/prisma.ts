@@ -17,8 +17,14 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+function hasCurrentDelegates(client: PrismaClient | undefined): client is PrismaClient {
+  return Boolean(client && "passwordResetToken" in client);
+}
+
 export const prisma =
-  globalForPrisma.prisma ??
+  (hasCurrentDelegates(globalForPrisma.prisma)
+    ? globalForPrisma.prisma
+    : undefined) ??
   new PrismaClient({
     adapter, // 👈 สำคัญมาก
     log:
