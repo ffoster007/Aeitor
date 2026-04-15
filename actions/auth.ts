@@ -4,17 +4,35 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
+import { addMinutes } from "date-fns";
 
 import { prisma } from "@/lib/prisma";
 import { verifyRefreshToken, hashToken } from "@/lib/jwt";
 import { clearAuthCookies, getRefreshToken } from "@/lib/cookies";
 import { requireUser } from "@/lib/session";
-import { signUpSchema, signInSchema, verifyEmailSchema } from "@/lib/validations/auth";
+import {
+  signUpSchema,
+  signInSchema,
+  verifyEmailSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
+} from "@/lib/validations/auth";
 import { createAndSendVerificationCode, verifyCode } from "@/lib/verification";
+import { sendPasswordResetEmail } from "@/lib/email";
 import { issueTokens } from "@/lib/auth-tokens";
 import type { ActionResult } from "@/types/actions";
 
 const BCRYPT_ROUNDS = 12; // ค่า cost factor — 12 เหมาะกับ production
+const RESET_TOKEN_EXPIRY_MINUTES = 30;
+
+function getBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+}
+
+function getDefaultUsernameFromEmail(email: string): string {
+  return email.split("@")[0] || "there";
+}
 
 // ---------------------------------------------------------------
 // SIGN UP
@@ -331,6 +349,157 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
     where: { id: sessionUser.sub },
     data: { password: hashedPassword },
   });
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------
+// FORGOT PASSWORD - REQUEST RESET
+// ---------------------------------------------------------------
+export async function requestPasswordResetAction(formData: FormData): Promise<ActionResult> {
+  const raw = {
+    email: formData.get("email"),
+  };
+
+  const parsed = requestPasswordResetSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const email = parsed.data.email.trim().toLowerCase();
+
+  // ใช้ response เดียวเสมอ เพื่อลดความเสี่ยง user enumeration
+  const neutralSuccess: ActionResult = { success: true };
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true, username: true, deletedAt: true },
+  });
+
+  if (!user || user.deletedAt) {
+    return neutralSuccess;
+  }
+
+  try {
+    const rawToken = randomBytes(32).toString("hex");
+    const hashedToken = hashToken(rawToken);
+    const expiresAt = addMinutes(new Date(), RESET_TOKEN_EXPIRY_MINUTES);
+
+    await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        token: hashedToken,
+        userId: user.id,
+        expiresAt,
+      },
+    });
+
+    const resetUrl = `${getBaseUrl()}/auth/reset-password?token=${encodeURIComponent(rawToken)}`;
+    await sendPasswordResetEmail(
+      user.email,
+      user.username || getDefaultUsernameFromEmail(user.email),
+      resetUrl,
+      RESET_TOKEN_EXPIRY_MINUTES,
+    );
+  } catch (error) {
+    console.error("Password reset request failed", error);
+  }
+
+  return neutralSuccess;
+}
+
+// ---------------------------------------------------------------
+// FORGOT PASSWORD - VALIDATE TOKEN
+// ---------------------------------------------------------------
+export async function validatePasswordResetTokenAction(token: string): Promise<ActionResult> {
+  const cleanedToken = token.trim();
+
+  const parsed = resetPasswordSchema.shape.token.safeParse(cleanedToken);
+  if (!parsed.success) {
+    return { success: false, errors: { _form: ["This reset link is invalid or has expired."] } };
+  }
+
+  const hashedToken = hashToken(cleanedToken);
+  const tokenRow = await prisma.passwordResetToken.findUnique({
+    where: { token: hashedToken },
+    select: { id: true, expiresAt: true, usedAt: true },
+  });
+
+  if (!tokenRow || tokenRow.usedAt || tokenRow.expiresAt < new Date()) {
+    return { success: false, errors: { _form: ["This reset link is invalid or has expired."] } };
+  }
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------
+// FORGOT PASSWORD - RESET PASSWORD
+// ---------------------------------------------------------------
+export async function resetPasswordAction(formData: FormData): Promise<ActionResult> {
+  const raw = {
+    token: formData.get("token"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  };
+
+  const parsed = resetPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const { token, password } = parsed.data;
+  const hashedToken = hashToken(token);
+
+  const tokenRow = await prisma.passwordResetToken.findUnique({
+    where: { token: hashedToken },
+    include: { user: { select: { id: true, password: true, deletedAt: true } } },
+  });
+
+  if (!tokenRow || tokenRow.usedAt || tokenRow.expiresAt < new Date() || tokenRow.user.deletedAt) {
+    return { success: false, errors: { _form: ["This reset link is invalid or has expired."] } };
+  }
+
+  const isSamePassword = await bcrypt.compare(password, tokenRow.user.password);
+  if (isSamePassword) {
+    return { success: false, errors: { password: ["Please choose a different password."] } };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.passwordResetToken.updateMany({
+        where: {
+          id: tokenRow.id,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { usedAt: new Date() },
+      });
+
+      if (consumed.count !== 1) {
+        throw new Error("RESET_TOKEN_INVALID");
+      }
+
+      await tx.user.update({
+        where: { id: tokenRow.userId },
+        data: { password: hashedPassword },
+      });
+
+      await tx.passwordResetToken.deleteMany({
+        where: {
+          userId: tokenRow.userId,
+          id: { not: tokenRow.id },
+        },
+      });
+
+      // Invalidate all existing sessions so only the new password can be used to sign in.
+      await tx.refreshToken.deleteMany({ where: { userId: tokenRow.userId } });
+    });
+  } catch {
+    return { success: false, errors: { _form: ["This reset link is invalid or has expired."] } };
+  }
 
   return { success: true };
 }

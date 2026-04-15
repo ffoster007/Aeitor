@@ -35,6 +35,27 @@ export const verifyEmailSchema = z.object({
     .regex(/^\d{6}$/, "Code must contain only digits"),
 });
 
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email("Invalid email format"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    token: z
+      .string()
+      .min(32, "Reset token is invalid")
+      .max(128, "Reset token is invalid")
+      .regex(/^[a-f0-9]+$/i, "Reset token is invalid"),
+    password: signUpSchema.shape.password,
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type SignInInput = z.infer<typeof signInSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

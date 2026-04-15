@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { AlertCircle, ArrowRight, Mail, RefreshCcw, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowRight, Mail, RefreshCcw } from "lucide-react";
 import { verifyEmailAction, resendVerificationCodeAction } from "@/actions/auth";
 
 function VerifyPageContent() {
@@ -199,24 +199,6 @@ function VerifyPageContent() {
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: "#555", fontFamily: "'Helvetica Neue', sans-serif" }}>
                   New code emails are sent automatically when you sign up or when an unverified account signs in.
-                </p>
-              </div>
-
-              <div
-                className="rounded-2xl border border-neutral-200 p-5"
-                style={{ backgroundColor: "rgba(255,255,255,0.62)" }}
-              >
-                <div
-                  className="w-10 h-10 rounded-full mb-4 flex items-center justify-center border border-neutral-300"
-                  style={{ backgroundColor: "rgba(255,255,255,0.7)" }}
-                >
-                  <ShieldCheck size={18} strokeWidth={1.7} color="#555" />
-                </div>
-                <p className="text-xs uppercase tracking-widest mb-2" style={{ color: "#999", fontFamily: "'Helvetica Neue', sans-serif" }}>
-                  Secure access
-                </p>
-                <p className="text-sm leading-relaxed" style={{ color: "#555", fontFamily: "'Helvetica Neue', sans-serif" }}>
-                  Verification keeps inactive or mistyped addresses from reaching the workspace before setup is complete.
                 </p>
               </div>
             </div>
