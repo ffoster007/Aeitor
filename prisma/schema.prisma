@@ -28,9 +28,24 @@ model User {
   vendors       Vendor[]
   alertSettings VendorAlertSetting[]
   verificationCodes VerificationCode[]
+  passwordResetTokens PasswordResetToken[]
   subscription  Subscription?
   
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique // SHA-256 hash of raw reset token
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 enum BillingPlan {

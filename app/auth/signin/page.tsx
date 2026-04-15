@@ -174,7 +174,7 @@ function SignInPageContent() {
                   <label className="text-xs" style={{ color: "#666", fontFamily: "'Helvetica Neue', sans-serif" }}>
                     Password
                   </label>
-                  <Link href="/forgot-password"
+                  <Link href="/auth/forgot-password"
                     className="text-xs underline underline-offset-2 hover:text-black transition-colors"
                     style={{ color: "#888", fontFamily: "'Helvetica Neue', sans-serif" }}>
                     Forgot password?

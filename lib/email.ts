@@ -128,3 +128,28 @@ export async function sendVerificationEmail(
     `,
   });
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  username: string,
+  resetUrl: string,
+  expiresInMinutes: number,
+) {
+  await sendEmail({
+    from: FROM,
+    to,
+    subject: "Reset your Aeitor password",
+    html: `
+      <div style="font-family:sans-serif;color:#111;max-width:560px">
+        <h2>Password Reset Request</h2>
+        <p>Hi <strong>${username}</strong>,</p>
+        <p>We received a request to reset your password. Click the button below to set a new password.</p>
+        <p style="margin:24px 0">
+          <a href="${resetUrl}" style="display:inline-block;background:#1a1a1a;color:#fff;padding:12px 18px;border-radius:10px;text-decoration:none">Reset password</a>
+        </p>
+        <p style="font-size:14px;color:#555">This link expires in ${expiresInMinutes} minutes and can only be used once.</p>
+        <p style="font-size:12px;color:#718096">If you did not request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
