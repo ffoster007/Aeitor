@@ -1,4 +1,4 @@
-// proxy.ts  (root ของ project)
+// proxy.ts (project root)
 
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
@@ -9,9 +9,9 @@ if (!jwtSecret) {
 }
 const secret = new TextEncoder().encode(jwtSecret);
 
-// Routes ที่ต้อง login
+// Routes that require authentication.
 const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/profile"];
-// Routes สำหรับ guest (login แล้วจะ redirect ออก)
+// Guest-only routes. Signed-in users are redirected away.
 const AUTH_PREFIXES = ["/auth/signin", "/auth/signup"];
 
 export async function proxy(request: NextRequest) {
@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
   const isAuthRoute = AUTH_PREFIXES.some((p) => pathname.startsWith(p));
 
-  // ไม่ต้อง check ถ้าไม่ใช่ protected หรือ auth route
+  // Skip checks for routes that are neither protected nor auth-only.
   if (!isProtected && !isAuthRoute) {
     return NextResponse.next();
   }
@@ -34,11 +34,11 @@ export async function proxy(request: NextRequest) {
       await jwtVerify(accessToken, secret);
       isAuthenticated = true;
     } catch {
-      // token หมดอายุหรือ invalid
+      // The token is expired or invalid.
     }
   }
 
-  // 2. ถ้า access token ใช้ไม่ได้ → ลอง refresh
+  // 2. If the access token cannot be used, try a refresh.
   if (!isAuthenticated) {
     const refreshToken = request.cookies.get("refresh_token")?.value;
 
@@ -86,7 +86,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 3. Guard logic
+  // 3. Route guard logic.
   if (isProtected && !isAuthenticated) {
     const loginUrl = new URL("/auth/signin", request.url);
     loginUrl.searchParams.set("redirectTo", pathname);

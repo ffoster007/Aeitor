@@ -1,12 +1,12 @@
 // lib/cookies.ts
-// Helper จัดการ HttpOnly cookie ฝั่ง server
+// Server-side helpers for managing HttpOnly cookies.
 
 import { cookies } from "next/headers";
 
 const COOKIE_OPTIONS = {
-  httpOnly: true,                                          // JS ฝั่ง client เข้าไม่ได้
-  secure: process.env.NODE_ENV === "production",           // HTTPS only ใน production
-  sameSite: "lax" as const,                               // CSRF protection
+  httpOnly: true,                                          // Not accessible from client-side JavaScript.
+  secure: process.env.NODE_ENV === "production",           // HTTPS only in production.
+  sameSite: "lax" as const,                               // Basic CSRF protection.
   path: "/",
 };
 
@@ -18,12 +18,12 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
 
   cookieStore.set(ACCESS_TOKEN_COOKIE, accessToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 60 * 15,           // 15 นาที (ตรงกับ JWT expiry)
+    maxAge: 60 * 15,           // 15 minutes, matching the JWT expiry.
   });
 
   cookieStore.set(REFRESH_TOKEN_COOKIE, refreshToken, {
     ...COOKIE_OPTIONS,
-    maxAge: 60 * 60 * 24 * 7,  // 7 วัน
+    maxAge: 60 * 60 * 24 * 7,  // 7 days.
   });
 }
 

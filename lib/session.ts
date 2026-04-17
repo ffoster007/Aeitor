@@ -1,5 +1,5 @@
 // lib/session.ts
-// ใช้ใน Server Components / Server Actions เพื่อดึง user จาก access token
+// Used by Server Components and Server Actions to read the user from the access token.
 
 import { verifyAccessToken, type AccessTokenPayload } from "./jwt";
 import { getAccessToken } from "./cookies";
@@ -11,17 +11,17 @@ export async function getCurrentUser(): Promise<AccessTokenPayload | null> {
     if (!token) return null;
     return await verifyAccessToken(token);
   } catch {
-    // Token หมดอายุหรือ invalid — middleware จะ refresh แทน
+    // The token is expired or invalid; middleware will handle the refresh flow.
     return null;
   }
 }
 
-// Require auth — ใช้ใน Server Components ที่ต้องการ guard
+// Require auth for guarded Server Components.
 export async function requireUser(): Promise<AccessTokenPayload> {
   const user = await getCurrentUser();
   if (!user) {
-    // ไม่ redirect ที่นี่ เพราะ middleware จัดการแล้ว
-    // throw เพื่อให้ error boundary หรือ caller จัดการ
+    // Do not redirect here because middleware already handles that.
+    // Throw instead so the caller or an error boundary can decide what to do.
     throw new Error("Unauthorized");
   }
 

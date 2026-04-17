@@ -1,6 +1,6 @@
 "use client";
 // components/toolbar.tsx
-// Client Component — รับข้อมูล user จาก props
+// Client Component that receives user data via props.
 
 import Image from "next/image";
 import Link from "next/link";
@@ -45,10 +45,10 @@ export default function Toolbar({ user }: ToolbarProps = {}) {
             </Link>
         </div>
 
-      {/* Center — ว่างไว้ขยาย */}
+      {/* Center spacer for future expansion. */}
       <div className="flex-1" />
 
-      {/* Right — Avatar (แสดงเฉพาะตอน login) */}
+      {/* Right side avatar, shown only when the user is signed in. */}
       {isSignedIn ? (
         <div className="flex items-center gap-2 px-2">
           <HelpAndFeedback />

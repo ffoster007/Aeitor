@@ -16,7 +16,7 @@ model User {
   id            String         @id @default(cuid())
   username      String         @unique
   email         String         @unique
-  password      String          // bcrypt hash — ห้ามเก็บ plain text
+  password      String          // bcrypt hash; never store plain text passwords
   emailVerified Boolean        @default(false) @map("email_verified")
   deletedAt     DateTime?      @map("deleted_at")
   deletionRequestedAt DateTime? @map("deletion_requested_at")
@@ -126,7 +126,7 @@ model Vendor {
   @@map("vendors")
 }
 
-// เก็บกี่วันล่วงหน้าที่ส่ง alert แล้ว (กัน duplicate send)
+// Tracks which alert lead times have already been sent to avoid duplicates.
 model VendorSentAlert {
   id       String   @id @default(cuid())
   vendorId String   @map("vendor_id")
@@ -138,7 +138,7 @@ model VendorSentAlert {
   @@map("vendor_sent_alerts")
 }
 
-// ตั้งค่า alert ของแต่ละ user (กี่วันล่วงหน้า + weekly summary)
+// Per-user alert settings, including lead times and the weekly summary option.
 model VendorAlertSetting {
   id            String   @id @default(cuid())
   userId        String   @map("user_id")
@@ -152,7 +152,7 @@ model VendorAlertSetting {
   @@map("vendor_alert_settings")
 }
 
-// เก็บ refresh token เพื่อรองรับ revoke session (logout ทุกอุปกรณ์)
+// Stores refresh tokens so sessions can be revoked across all devices.
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique               // SHA-256 hash of actual token
