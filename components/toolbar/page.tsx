@@ -5,6 +5,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Avatar from "./avatar";
+import HelpAndFeedback from "./h&f";
 
 export type ToolbarUser = {
   sub: string;
@@ -49,7 +50,8 @@ export default function Toolbar({ user }: ToolbarProps = {}) {
 
       {/* Right — Avatar (แสดงเฉพาะตอน login) */}
       {isSignedIn ? (
-        <div className="flex items-center px-2">
+        <div className="flex items-center gap-2 px-2">
+          <HelpAndFeedback />
           <Avatar user={{ username: currentUser.username, email: currentUser.email }} />
         </div>
       ) : (
