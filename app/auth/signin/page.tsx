@@ -51,7 +51,7 @@ function SignInPageContent() {
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await signInAction(formData);
-      // redirect() จะ throw ก่อนถึงบรรทัดนี้ถ้า success
+      // redirect() throws before this line when sign-in succeeds.
       setResult(res);
     });
   }
@@ -74,7 +74,7 @@ function SignInPageContent() {
                 className="w-9 h-9 "
             >
             <Image
-                src="/aeitor.png"   // อยู่ใน public/logo.png
+              src="/aeitor.png"   // Stored in public/aeitor.png
                 alt="logo"
                 width={24}
                 height={24}

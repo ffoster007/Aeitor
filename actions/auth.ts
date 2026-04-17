@@ -23,7 +23,7 @@ import { sendPasswordResetEmail } from "@/lib/email";
 import { issueTokens } from "@/lib/auth-tokens";
 import type { ActionResult } from "@/types/actions";
 
-const BCRYPT_ROUNDS = 12; // ค่า cost factor — 12 เหมาะกับ production
+const BCRYPT_ROUNDS = 12; // Cost factor; 12 is suitable for production.
 const RESET_TOKEN_EXPIRY_MINUTES = 30;
 
 function getBaseUrl(): string {
@@ -74,7 +74,7 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
 
   const { username, email, password } = parsed.data;
 
-  // 2. ตรวจ email และ username ซ้ำ (query เดียว)
+  // 2. Check for duplicate email and username in a single query.
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
     select: { email: true, username: true },
@@ -84,8 +84,8 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
     return {
       success: false,
       errors: {
-        ...(existing.email === email && { email: ["Email นี้ถูกใช้งานแล้ว"] }),
-        ...(existing.username === username && { username: ["Username นี้ถูกใช้งานแล้ว"] }),
+        ...(existing.email === email && { email: ["This email address is already in use."] }),
+        ...(existing.username === username && { username: ["This username is already in use."] }),
       },
     };
   }
@@ -93,7 +93,7 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
   // 3. Hash password
   const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-  // 4. สร้าง User ใน DB (emailVerified: false)
+  // 4. Create the user record in the database (emailVerified: false).
   let user: { id: string; email: string; username: string };
   try {
     user = await prisma.user.create({
@@ -106,14 +106,14 @@ export async function signUpAction(formData: FormData): Promise<ActionResult> {
       select: { id: true, email: true, username: true },
     });
   } catch {
-    return { success: false, errors: { _form: ["เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"] } };
+    return { success: false, errors: { _form: ["Something went wrong. Please try again."] } };
   }
 
-  // 5. สร้างและส่ง verification code
+  // 5. Create and send the verification code.
   try {
     await createAndSendVerificationCode(user.id, user.email, user.username);
   } catch {
-    return { success: false, errors: { _form: ["ไม่สามารถส่ง email ได้ กรุณาลองใหม่อีกครั้ง"] } };
+    return { success: false, errors: { _form: ["We could not send the email. Please try again."] } };
   }
 
   // 6. Store userId in query param for verification page
@@ -140,13 +140,13 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   const { username, password } = parsed.data;
   const redirectTo = typeof raw.redirectTo === "string" ? raw.redirectTo : null;
 
-  // 2. หา user — ใช้ message กว้าง ๆ เพื่อป้องกัน user enumeration
+  // 2. Look up the user. Use a broad message to prevent user enumeration.
   const user = await prisma.user.findUnique({
     where: { username },
     select: { id: true, email: true, username: true, password: true, emailVerified: true, deletedAt: true },
   });
 
-  // timing-safe: compare เสมอแม้ไม่มี user เพื่อป้องกัน timing attack
+  // Timing-safe compare: always compare, even when no user is found, to reduce timing attacks.
   const dummyHash = "$2b$12$invalidhashfortimingprotection00000000000000000000000";
   const isValid = await bcrypt.compare(password, user?.password ?? dummyHash);
 
@@ -158,7 +158,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
     return { success: false, errors: { _form: ["Username or Password is incorrect"] } };
   }
 
-  // 3. ทุกการ sign-in ต้อง verify ผ่าน email code ก่อนออก tokens
+  // 3. Every sign-in must complete email verification before issuing tokens.
   const canStartChallenge = await startSignInVerificationChallenge(
     { id: user.id, email: user.email, username: user.username },
   );
@@ -188,7 +188,7 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
 // SIGN OUT
 // ---------------------------------------------------------------
 export async function signOutAction(): Promise<void> {
-  // Revoke refresh token จาก DB
+  // Revoke the refresh token stored in the database.
   const rawRefreshToken = await getRefreshToken();
   if (rawRefreshToken) {
     const hashed = hashToken(rawRefreshToken);
@@ -202,7 +202,7 @@ export async function signOutAction(): Promise<void> {
 
 // ---------------------------------------------------------------
 // REFRESH SESSION
-// เรียกจาก middleware เมื่อ access token หมดอายุ
+// Called by middleware when the access token expires.
 // ---------------------------------------------------------------
 export async function refreshSessionAction(): Promise<boolean> {
   const rawRefreshToken = await getRefreshToken();
@@ -212,7 +212,7 @@ export async function refreshSessionAction(): Promise<boolean> {
     // 1. Verify JWT signature
     await verifyRefreshToken(rawRefreshToken);
 
-    // 2. ตรวจ hash ใน DB (ป้องกัน token reuse)
+    // 2. Check the hashed token in the database to prevent token reuse.
     const hashed = hashToken(rawRefreshToken);
     const stored = await prisma.refreshToken.findUnique({
       where: { token: hashed },
@@ -220,8 +220,8 @@ export async function refreshSessionAction(): Promise<boolean> {
     });
 
     if (!stored) {
-      // อาจเกิดจาก concurrent refresh ที่ token ถูก rotate ไปแล้วใน request อื่น
-      // ไม่ clear cookie ทันที เพื่อลดโอกาสเด้ง logout ทั้งที่ request อื่น refresh สำเร็จ
+      // This can happen during a concurrent refresh if another request already rotated the token.
+      // Do not clear cookies immediately so we avoid logging the user out when another request succeeded.
       return false;
     }
 
@@ -230,10 +230,10 @@ export async function refreshSessionAction(): Promise<boolean> {
       return false;
     }
 
-    // 3. Rotate refresh token (ใช้ token เดิมได้แค่ครั้งเดียว)
+    // 3. Rotate the refresh token so each token can be used only once.
     await prisma.refreshToken.delete({ where: { token: hashed } });
 
-    // 4. ออก token ใหม่
+    // 4. Issue new tokens.
     await issueTokens(stored.user);
     return true;
   } catch {
@@ -254,26 +254,26 @@ export async function verifyEmailAction(userId: string, code: string, redirectTo
 
   const { code: validatedCode } = parsed.data;
 
-  // 2. ตรวจสอบ userId
+  // 2. Check the userId.
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, username: true, emailVerified: true },
   });
 
   if (!user) {
-    return { success: false, errors: { _form: ["ไม่พบผู้ใช้"] } };
+    return { success: false, errors: { _form: ["User not found."] } };
   }
 
-  // 3. ตรวจสอบ verification code
+  // 3. Verify the email code.
   const isValid = await verifyCode(userId, validatedCode);
   if (!isValid) {
-    return { success: false, errors: { code: ["รหัสไม่ถูกต้องหรือหมดอายุ"] } };
+    return { success: false, errors: { code: ["The code is invalid or has expired."] } };
   }
 
-  // 4. ออก tokens และ set cookies
+  // 4. Issue tokens and set cookies.
   await issueTokens(user);
 
-  // 5. Redirect ไป dashboard
+  // 5. Redirect to the dashboard.
   revalidatePath("/", "layout");
   redirect(safeRedirectPath(redirectTo));
 }
@@ -282,21 +282,21 @@ export async function verifyEmailAction(userId: string, code: string, redirectTo
 // RESEND VERIFICATION CODE
 // ---------------------------------------------------------------
 export async function resendVerificationCodeAction(userId: string): Promise<ActionResult> {
-  // 1. ตรวจสอบ userId
+  // 1. Check the userId.
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, email: true, username: true, emailVerified: true },
   });
 
   if (!user) {
-    return { success: false, errors: { _form: ["ไม่พบผู้ใช้"] } };
+    return { success: false, errors: { _form: ["User not found."] } };
   }
 
-  // 2. สร้างและส่ง verification code ใหม่ (รองรับทั้ง initial verify และ sign-in verify)
+  // 2. Create and send a new verification code for both initial verification and sign-in.
   try {
     await createAndSendVerificationCode(user.id, user.email, user.username);
   } catch {
-    return { success: false, errors: { _form: ["ไม่สามารถส่ง email ได้ กรุณาลองใหม่อีกครั้ง"] } };
+    return { success: false, errors: { _form: ["We could not send the email. Please try again."] } };
   }
 
   return { success: true };
@@ -322,7 +322,7 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
     typeof newPassword !== "string" ||
     typeof confirmPassword !== "string"
   ) {
-    return { success: false, errors: { _form: ["ข้อมูลไม่ถูกต้อง"] } };
+    return { success: false, errors: { _form: ["Invalid request data."] } };
   }
 
   // Validate new password strength
@@ -336,7 +336,7 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
   }
 
   if (newPassword !== confirmPassword) {
-    return { success: false, errors: { confirmPassword: ["รหัสผ่านใหม่ไม่ตรงกัน"] } };
+    return { success: false, errors: { confirmPassword: ["The new passwords do not match."] } };
   }
 
   // Fetch user — only users with a password hash can change it
@@ -346,18 +346,18 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
   });
 
   if (!user) {
-    return { success: false, errors: { _form: ["ไม่พบผู้ใช้"] } };
+    return { success: false, errors: { _form: ["User not found."] } };
   }
 
   const isValid = await bcrypt.compare(currentPassword, user.password);
   if (!isValid) {
-    return { success: false, errors: { currentPassword: ["รหัสผ่านปัจจุบันไม่ถูกต้อง"] } };
+    return { success: false, errors: { currentPassword: ["Your current password is incorrect."] } };
   }
 
   if (currentPassword === newPassword) {
     return {
       success: false,
-      errors: { newPassword: ["รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม"] },
+      errors: { newPassword: ["Your new password must be different from your current password."] },
     };
   }
 
@@ -386,7 +386,7 @@ export async function requestPasswordResetAction(formData: FormData): Promise<Ac
 
   const email = parsed.data.email.trim().toLowerCase();
 
-  // ใช้ response เดียวเสมอ เพื่อลดความเสี่ยง user enumeration
+  // Always use the same response to reduce the risk of user enumeration.
   const neutralSuccess: ActionResult = { success: true };
 
   const user = await prisma.user.findUnique({

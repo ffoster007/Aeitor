@@ -94,13 +94,13 @@ export default function Avatar({ user }: { user: UserInfo }) {
   const { theme, setTheme } = useTheme();
   const [isPending, startTransition] = useTransition();
 
-  // Initial letter สำหรับ fallback
+  // Use the first letter as the fallback avatar.
   const initials = useMemo(
     () => user.username?.[0]?.toUpperCase() ?? "U",
     [user.username]
   );
 
-  // ปิด dropdown เมื่อคลิกข้างนอกหรือกด Escape
+  // Close the dropdown when clicking outside or pressing Escape.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -119,7 +119,7 @@ export default function Avatar({ user }: { user: UserInfo }) {
     };
   }, [isOpen]);
 
-  // Sign out — ใช้ Server Action จากระบบ JWT ที่สร้างไว้
+  // Sign out using the existing JWT-based Server Action.
   const handleSignOut = () => {
     setIsOpen(false);
     startTransition(async () => {

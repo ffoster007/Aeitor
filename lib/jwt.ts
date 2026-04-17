@@ -1,5 +1,5 @@
 // lib/jwt.ts
-// ทำงานฝั่ง server เท่านั้น — ห้าม import ใน Client Component
+// Server-only code. Do not import this into a Client Component.
 
 import { SignJWT, jwtVerify } from "jose";
 import { createHash } from "crypto";
@@ -21,7 +21,7 @@ export interface AccessTokenPayload {
 
 export interface RefreshTokenPayload {
   sub: string;       // user id
-  jti: string;       // unique token id (ใช้ revoke ได้)
+  jti: string;       // unique token id used for revocation
 }
 
 // ---------------------------------------------------------------
@@ -57,8 +57,8 @@ export async function verifyRefreshToken(token: string): Promise<RefreshTokenPay
 }
 
 // ---------------------------------------------------------------
-// Hash refresh token ก่อนเก็บ DB (เหมือน hash password)
-// ถ้า DB หลุด attacker ก็ใช้ token ไม่ได้
+// Hash the refresh token before storing it in the database, similar to a password hash.
+// If the database is ever exposed, the raw token still cannot be used directly.
 // ---------------------------------------------------------------
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

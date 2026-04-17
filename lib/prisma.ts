@@ -4,15 +4,15 @@ import { PrismaClient } from "@/lib/generated/prisma";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// สร้าง connection pool (PostgreSQL)
+// Create the PostgreSQL connection pool.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// สร้าง adapter
+// Create the Prisma adapter.
 const adapter = new PrismaPg(pool);
 
-// Singleton (กัน connection leak)
+// Reuse a singleton client to avoid connection leaks during development.
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -26,7 +26,7 @@ export const prisma =
     ? globalForPrisma.prisma
     : undefined) ??
   new PrismaClient({
-    adapter, // 👈 สำคัญมาก
+    adapter, // Required for the PostgreSQL adapter setup.
     log:
       process.env.NODE_ENV === "development"
         ? ["error", "warn"]

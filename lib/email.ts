@@ -4,7 +4,7 @@ import { differenceInDays, format } from "date-fns";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL || "Aeitor <notify@aeitor.com>";
 
-// Aeitor <onboarding@resend.dev> สำหรับทดสอบ
+// Aeitor <onboarding@resend.dev> can be used for testing.
 
 interface Vendor {
   id: string;

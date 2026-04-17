@@ -1,5 +1,5 @@
 // app/api/auth/refresh/route.ts
-// เรียกโดย middleware เมื่อ access token หมดอายุ
+// Called by middleware when the access token expires.
 
 import { NextResponse } from "next/server";
 import { refreshSessionAction } from "@/actions/auth";
