@@ -7,7 +7,7 @@ const PRICING_PLANS = [
 		name: "Free Tier",
 		price: "$0",
 		cadence: "/month",
-		description: "For small teams getting out of spreadsheets and starting with a shared renewal view.",
+		description: "For individuals and small teams that are just getting started",
 		highlight: "Best for evaluation",
 		features: [
 			"Track up to 2 contracts",
@@ -20,7 +20,7 @@ const PRICING_PLANS = [
 		name: "Growth",
 		price: "$10",
 		cadence: "/user /month",
-		description: "For teams that need earlier alerts, shared ownership, and cleaner billing decisions.",
+		description: "For growing teams that need to track more contracts and vendors",
 		highlight: "FOR TEAMS",
 		features: [
 			"Track up to 50 contracts",
@@ -33,7 +33,7 @@ const PRICING_PLANS = [
 		name: "Scale",
 		price: "$20",
 		cadence: "/user /month",
-		description: "For larger organizations that need approvals, reporting, and stronger operating controls.",
+		description: "For organizations and businesses that need to track unlimited contracts, and get early access to new features.",
 		highlight: "FOR BUSINESSES",
 		features: [
 			"Everything in Growth",

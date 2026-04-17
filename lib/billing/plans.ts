@@ -7,7 +7,7 @@ export const BILLING_PLANS = [
     badge: "Current plan",
     tone: "neutral" as const,
     description:
-      "For small teams getting out of spreadsheets and starting with a shared renewal view.",
+      "For individuals and small teams that are just getting started",
     features: ["Track up to 2 contracts", "Basic overview"],
     vendorLimit: 2,
     csvExport: false,
@@ -17,11 +17,11 @@ export const BILLING_PLANS = [
     id: "GROWTH",
     name: "Growth",
     priceLabel: "$10",
-    cadenceLabel: "/user /month",
+    cadenceLabel: "/month",
     badge: "Recommended",
     tone: "blue" as const,
     description:
-      "For teams that need earlier alerts, shared ownership, and cleaner billing decisions.",
+      "For growing teams that need to track more contracts and vendors",
     features: ["Track up to 50 contracts", "CSV exports for reviews"],
     vendorLimit: 50,
     csvExport: true,
@@ -31,11 +31,11 @@ export const BILLING_PLANS = [
     id: "SCALE",
     name: "Scale",
     priceLabel: "$20",
-    cadenceLabel: "/user /month",
+    cadenceLabel: "/month",
     badge: "Business",
     tone: "amber" as const,
     description:
-      "For larger organizations that need approvals, reporting, and stronger operating controls.",
+      "For organizations and businesses that need to track unlimited contracts, and get early access to new features.",
     features: [
       "Everything in Growth",
       "Unlimited contracts and vendors",
