@@ -26,7 +26,15 @@ export async function getBillingStateForUser(userId: string): Promise<BillingSta
 
   const plan = normalizePlan(subscription?.plan);
   const status = subscription?.status ?? "CANCELED";
-  const isActive = isActiveSubscriptionStatus(status);
+
+  // เพิ่มส่วนนี้: ถ้าตั้งยกเลิกไว้แล้ว และรอบบิลผ่านไปแล้ว ให้ถือว่าหมดสิทธิ์ทันที
+  // ไม่ต้องรอ Stripe webhook (กันกรณี webhook ตกหรือมาช้า)
+  const periodExpired =
+    Boolean(subscription?.cancelAtPeriodEnd) &&
+    Boolean(subscription?.currentPeriodEnd) &&
+    subscription!.currentPeriodEnd! < new Date();
+
+  const isActive = isActiveSubscriptionStatus(status) && !periodExpired;
 
   const effectivePlan: BillingPlanId = isActive ? plan : "FREE";
 
@@ -35,7 +43,7 @@ export async function getBillingStateForUser(userId: string): Promise<BillingSta
     vendorLimit: getVendorLimit(effectivePlan),
     csvExport: canExportCsv(effectivePlan),
     isPaid: effectivePlan !== "FREE",
-    status,
+    status: periodExpired ? "CANCELED" : status,
     cancelAtPeriodEnd: Boolean(subscription?.cancelAtPeriodEnd),
     currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
   };
