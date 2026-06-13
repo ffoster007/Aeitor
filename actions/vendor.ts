@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { assertCanCreateVendors, getBillingStateForUser } from "@/lib/billing/entitlements";
+import { assertCanCreateVendors, getBillingStateForUser, getLockedVendorIds, assertVendorNotLocked } from "@/lib/billing/entitlements";
 import { revalidatePath } from "next/cache";
 import { DEFAULT_ALERT_DAYS, normalizeAlertDays } from "@/lib/vendor-alerts";
 
@@ -42,13 +42,13 @@ export async function createVendor(data: VendorFormData) {
 export async function updateVendor(id: string, data: VendorFormData) {
   const user = await requireUser();
 
-  // Check ownership
   const existing = await prisma.vendor.findUnique({ where: { id } });
   if (!existing || existing.userId !== user.sub) {
     throw new Error("Vendor not found");
   }
 
-  // Clear sent alerts when end date changes (new renewal cycle)
+  await assertVendorNotLocked(user.sub, id); // <-- เพิ่มบรรทัดนี้
+
   if (existing.endDate.toISOString() !== new Date(data.endDate).toISOString()) {
     await prisma.vendorSentAlert.deleteMany({ where: { vendorId: id } });
   }
@@ -64,6 +64,11 @@ export async function updateVendor(id: string, data: VendorFormData) {
   });
 
   revalidatePath("/dashboard");
+}
+
+export async function getLockedVendorIdsAction() {
+  const user = await requireUser();
+  return getLockedVendorIds(user.sub);
 }
 
 export async function deleteVendor(id: string) {
