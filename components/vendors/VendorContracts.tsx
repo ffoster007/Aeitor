@@ -33,6 +33,7 @@ interface Vendor {
 interface Props {
   vendors: Vendor[];
   billing: BillingState;
+  lockedVendorIds: string[];
 }
 
 type Status = "safe" | "warning" | "critical";
@@ -292,7 +293,7 @@ function parseCsv(text: string): VendorFormData[] {
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────────
-export default function VendorContracts({ vendors: initialVendors, billing }: Props) {
+export default function VendorContracts({ vendors: initialVendors, billing, lockedVendorIds }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isCsvPending, startCsvTransition] = useTransition();
@@ -315,6 +316,7 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
     (v) => differenceInDays(v.endDate, today) <= 30 && differenceInDays(v.endDate, today) >= 0,
   ).length;
   const criticalVendors = vendors.filter((v) => getStatus(v.endDate) === "critical");
+  const lockedCount = lockedVendorIds.length;
 
   function refresh() {
     router.refresh();
@@ -381,7 +383,12 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
         setEditVendor(null);
         refresh();
       } catch (err) {
-        setActionError(err instanceof Error ? err.message : "Failed to update vendor");
+        const message = err instanceof Error ? err.message : "Failed to update vendor";
+        setActionError(message);
+        if (message.toLowerCase().includes("locked")) {
+          setEditVendor(null);
+          setUpgradeOpen(true);
+        }
       }
     });
   }
@@ -495,6 +502,21 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
         </div>
       )}
 
+      {lockedCount > 0 && (
+        <div className="mb-4 rounded-lg border border-[var(--warning-border)] bg-[var(--warning-bg)] px-4 py-3 text-sm text-[var(--warning-text)] flex items-center justify-between gap-3 flex-wrap">
+          <span>
+            {lockedCount} vendor{lockedCount !== 1 ? "s" : ""} {lockedCount !== 1 ? "are" : "is"} locked because they exceed your current plan limit ({billing.plan}). Upgrade to unlock, or delete other vendors to free up space.
+          </span>
+          <button
+            type="button"
+            onClick={() => setUpgradeOpen(true)}
+            className="text-xs font-medium underline underline-offset-2 hover:opacity-80 cursor-pointer shrink-0"
+          >
+            Upgrade plan
+          </button>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-[var(--surface-1)] rounded-lg px-4 py-3 border border-[var(--border)]">
@@ -599,12 +621,20 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
                 <tbody>
                   {vendors.map((v) => {
                     const status = getStatus(v.endDate);
+                    const isLocked = lockedVendorIds.includes(v.id);
                     return (
                       <tr
                         key={v.id}
-                        className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors"
+                        className={`border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors ${isLocked ? "opacity-50" : ""}`}
                       >
-                        <td className="px-3 py-3 font-medium text-[var(--text-primary)]">{v.name}</td>
+                        <td className="px-3 py-3 font-medium text-[var(--text-primary)]">
+                          {v.name}
+                          {isLocked && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--critical-bg)] text-[var(--critical-text)]">
+                              Locked
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-3 text-[var(--text-secondary)]">{format(v.endDate, "MMM d")}</td>
                         <td className="px-3 py-3 text-[var(--text-secondary)]">
                           ${getMonthlyCost(v).toLocaleString()}
@@ -614,12 +644,21 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
                         </td>
                         <td className="px-3 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => setEditVendor(v)}
-                              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
-                            >
-                              Edit
-                            </button>
+                            {isLocked ? (
+                              <button
+                                onClick={() => setUpgradeOpen(true)}
+                                className="text-xs text-[var(--brand)] hover:underline cursor-pointer"
+                              >
+                                Upgrade to edit
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setEditVendor(v)}
+                                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                            )}
                             <button
                               onClick={() => setDeleteId(v.id)}
                               className="text-xs text-[var(--destructive)] hover:opacity-80 transition-colors cursor-pointer"
@@ -654,7 +693,9 @@ export default function VendorContracts({ vendors: initialVendors, billing }: Pr
         open={upgradeOpen}
         onOpenChange={setUpgradeOpen}
         reason={
-          canAddVendor
+          lockedCount > 0
+            ? `You have ${lockedCount} vendor${lockedCount !== 1 ? "s" : ""} locked because they exceed your current plan limit. Upgrade to regain full access.`
+            : canAddVendor
             ? "This feature is available on Growth and Scale plans."
             : "Free Tier supports only 2 vendors. Upgrade to add more vendors."
         }

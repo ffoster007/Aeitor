@@ -67,3 +67,29 @@ export async function assertCanCreateVendors(userId: string, addCount: number) {
 
   return billing;
 }
+
+export async function getLockedVendorIds(userId: string): Promise<string[]> {
+  const billing = await getBillingStateForUser(userId);
+
+  if (billing.vendorLimit === null) {
+    return [];
+  }
+
+  // เก่าสุดอยู่ก่อน = ใช้งานได้, ที่เหลือหลัง limit = ถูกล็อก
+  const vendors = await prisma.vendor.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  return vendors.slice(billing.vendorLimit).map((v) => v.id);
+}
+
+export async function assertVendorNotLocked(userId: string, vendorId: string) {
+  const lockedIds = await getLockedVendorIds(userId);
+  if (lockedIds.includes(vendorId)) {
+    throw new Error(
+      "This vendor is locked because it exceeds your current plan limit. Upgrade your plan or delete other vendors to unlock it.",
+    );
+  }
+}

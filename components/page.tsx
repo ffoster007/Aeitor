@@ -15,9 +15,9 @@ interface Vendor {
   monthlyCost: number;
 }
 
-type PageProps = ToolbarProps & { vendors: Vendor[]; billing: BillingState };
+type PageProps = ToolbarProps & { vendors: Vendor[]; billing: BillingState; lockedVendorIds: string[] };
 
-export default function Page({ user, vendors, billing }: PageProps) {
+export default function Page({ user, vendors, billing, lockedVendorIds }: PageProps) {
   const [activeTab, setActiveTab] = useState<ActivityTabId>('Home');
 
   return (
@@ -27,7 +27,7 @@ export default function Page({ user, vendors, billing }: PageProps) {
         <ActivityBar activeTab={activeTab} onTabSelect={setActiveTab} />
         <div className="flex-1 bg-[var(--surface-0)] overflow-hidden">
           {activeTab === 'Home' && <HowToPage />}
-          {activeTab === 'Workspace' && <VendorContracts vendors={vendors} billing={billing} />}
+          {activeTab === 'Workspace' && <VendorContracts vendors={vendors} billing={billing} lockedVendorIds={lockedVendorIds} />}
         </div>
       </div>
     </div>
