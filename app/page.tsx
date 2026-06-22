@@ -174,14 +174,20 @@ export default async function LandingPage() {
       <section id="overview" className="max-w-5xl mx-auto px-8 pb-24 pt-10">
         {/* Section heading */}
         <div className="flex flex-col items-center text-center mb-10">
-          <h2
-            className="text-4xl md:text-5xl leading-tight max-w-xl mb-4"
-            style={{ color: "#111", fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 400 }}
-          >
-            Every vendor contract,{" "}
-            <em style={{ fontStyle: "italic", color: "#555" }}>SaaS, leases, services</em>
-            {" "}before it slips past the notice window.
-          </h2>
+            <h2
+            className="text-3xl md:text-4xl leading-tight max-w-2xl mb-4"
+            style={{
+                color: "#111",
+                fontFamily: "'Georgia', 'Times New Roman', serif",
+                fontWeight: 400,
+            }}
+            >
+            You&apos;re bleeding cash on forgotten{" "}
+            <em style={{ fontStyle: "italic", color: "#555", whiteSpace: "nowrap" }}>
+                auto&#8209;renewals.
+            </em>{" "}
+            Catch every contract before you&apos;re locked in for another year.
+            </h2>
           <p
             className="text-sm max-w-sm leading-relaxed"
             style={{ color: "#666", fontFamily: "'Helvetica Neue', sans-serif" }}
